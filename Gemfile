@@ -44,12 +44,13 @@ group :development, :test do
 
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false
+  gem "dotenv-rails", "~> 3.1"
 end
 
 
 
-gem "openai", "~> 0.3.0"
-
+gem "ruby-openai"
 gem "twilio-ruby", "~> 7.4"
+gem 'redis'
 
-gem "dotenv-rails", "~> 3.1"
+
