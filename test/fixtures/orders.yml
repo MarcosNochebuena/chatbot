@@ -1,0 +1,23 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  phone: MyString
+  name: MyString
+  date: 2025-01-27
+  time: 2025-01-27 14:27:51
+  items: MyText
+  address: MyText
+  location: MyString
+  total: 9.99
+  status: 1
+
+two:
+  phone: MyString
+  name: MyString
+  date: 2025-01-27
+  time: 2025-01-27 14:27:51
+  items: MyText
+  address: MyText
+  location: MyString
+  total: 9.99
+  status: 1
