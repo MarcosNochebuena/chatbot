@@ -1,88 +1,71 @@
 class WhatsAppBot
-  def self.generate_response_with_data_extraction(context, order)
+  def self.generate_response(user_message, context = nil)
+      # Uso de caché para evitar solicitudes repetidas a OpenAI
+      client = OpenAI::Client.new(access_token: ENV["OPENAI_API_KEY"])
+      begin
+        # Llamada al modelo GPT-3.5 con el historial completo
+        response = client.chat(
+          parameters: {
+            model: "gpt-3.5-turbo",
+            messages: context,
+            max_tokens: 150
+          }
+        )
+        response.dig("choices", 0, "message", "content") || "Lo siento, no pude generar una respuesta."
+      rescue Faraday::TooManyRequestsError
+        attempts += 1
+        if attempts <= 3
+          sleep(2**attempts)
+          retry
+        else
+          "Lo siento, el servicio está temporalmente no disponible. Por favor, intenta más tarde."
+        end
+      end
+  end
+
+  def self.extract_entities_from_message(user_message)
     client = OpenAI::Client.new(access_token: ENV["OPENAI_API_KEY"])
 
-    base_prompt = <<~PROMPT
-      Actúa como un asistente virtual amigable para agendar pedidos.
-      Tu objetivo es guiar al usuario en el proceso de agendar un pedido y, al mismo tiempo, analizar la conversación completa para extraer los datos necesarios.
+    current_date = Date.today.strftime("%Y-%m-%d")
 
-      Datos necesarios para el pedido:
-      - Nombre completo
-      - Fecha de entrega
-      - Hora de entrega
-      - Artículos solicitados
-      - Dirección de entrega
+    prompt = <<~PROMPT
+      Actúa como un extractor de datos para un sistema de pedidos.
+      Analiza el siguiente mensaje y extrae la información relevante en formato JSON.
+      Si no encuentras alguna información, usa null.
 
-      Si el usuario no ha proporcionado ningun dato, saluda y presentate como el asistente y empieza a solicitar la informacion requerida.
-      Si el usuario no ha proporcionado toda la información, haz preguntas amigables para completar los datos.
-      Cuando detectes que el usuario ha terminado y el pedido tiene todos los datos, responde confirmando que el pedido está listo para ser procesado.
+      Datos necesarios:
+      - Nombre completo, es de tipo texto
+      - Fecha de entrega, es de tipo date por lo cual debe ser en formato YYYY-MM-DD
+      - Hora de entrega, es de tipo time por lo cual debe ser en formato HH:MM
+      - Dirección de entrega, es tipo texto
+      - Artículos solicitados, es tipo texto
 
-      Aquí está la conversación hasta ahora:
-    PROMPT
+      Hoy es: #{current_date}.
+      Interpreta fechas relativas como "hoy", "mañana" o "el próximo lunes" en base a esta fecha.
 
-    conversation_context = context.map do |msg|
-      "#{msg[:role] == 'user' ? 'Usuario' : 'Asistente'}: #{msg[:content]}"
-    end.join("\n")
+      Mensaje del usuario: "#{user_message}"
 
-    json_prompt = <<~JSON_PROMPT
-      Responde de manera amigable e incluye los datos extraídos en formato JSON al final de tu respuesta:
+      Responde en formato JSON:
       {
-        "nombre": "#{order[:name] || 'Desconocido'}",
-        "fecha_entrega": "#{order[:delivery_date] || 'Desconocido'}",
-        "hora_entrega": "#{order[:delivery_time] || 'Desconocido'}",
-        "articulos": "#{order[:items] || 'Desconocido'}",
-        "direccion": "#{order[:address] || 'Desconocido'}",
-        "pedido_completo": #{order_complete?(order)}
+        "name": null,
+        "delivery_date": null,
+        "delivery_time": null,
+        "items": null,
+        "address": null
       }
-    JSON_PROMPT
-
-    prompt = base_prompt + conversation_context + "\n\n" + json_prompt
+    PROMPT
 
 
     response = client.chat(
       parameters: {
         model: "gpt-3.5-turbo",
         messages: [ { role: "user", content: prompt } ],
-        max_tokens: 500,
-        temperature: 0.7
+        max_tokens: 150
       }
     )
 
-    # Extrae el contenido del asistente
-    assistant_message = response.dig("choices", 0, "message", "content")
-
-    extracted_data = {}
-    if assistant_message
-      begin
-        # Busca un bloque JSON dentro del texto devuelto
-        json_match = assistant_message.match(/\{.*\}/m)
-        if json_match
-          extracted_data = JSON.parse(json_match[0])
-          # Elimina el bloque JSON del mensaje del asistente
-          assistant_message.sub!(json_match[0], "")
-        end
-      rescue JSON::ParserError => e
-        Rails.logger.error("Error al parsear JSON: #{e.message}")
-      end
-    end
-
-    {
-      message: assistant_message || "Lo siento, no pude generar una respuesta adecuada.",
-      extracted_data: extracted_data
-    }
-  rescue => e
-    Rails.logger.error("Error al generar la respuesta: #{e.message}")
-    {
-      message: "Lo siento, hubo un problema al procesar tu solicitud. Intenta nuevamente.",
-      extracted_data: {}
-    }
-  end
-
-  def self.order_complete?(order)
-    order[:name].present? &&
-      order[:date].present? &&
-      order[:time].present? &&
-      order[:items].any? &&
-      order[:address].present?
+    # Intenta parsear la respuesta JSON
+    extracted_data = JSON.parse(response.dig("choices", 0, "message", "content")) rescue {}
+    extracted_data
   end
 end
