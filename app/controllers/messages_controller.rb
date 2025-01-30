@@ -1,5 +1,6 @@
 require_relative "../services/whatsapp_bot"
 class MessagesController < ApplicationController
+  skip_before_action :verify_authenticity_token
   def create
     if params["MessageType"] == "text" && params["Body"].present? && params["From"].present?
       user_message = params["Body"]
