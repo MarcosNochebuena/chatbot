@@ -15,6 +15,16 @@ class MessagesController < ApplicationController
       # Envía la respuesta al cliente
       MessageSender.send(to: from_number, body: response_message)
       render json: { status: "success" }, status: :ok
+    elsif params["MessageType"] == "location" && params["Latitude"].present? && params["Longitude"].present?
+      location = "#{params['Latitude']},#{params['Longitude']}"
+      from_number = params["From"]
+      conversation = find_or_create_conversation(from_number)
+      slots = conversation[:slots] || initialize_slots
+
+      slots[:location] ||= location
+      # MessageSender.send(to: from_number, body: response_message)
+      puts slots
+      render json: { status: "success" }, status: :ok
     elsif params["MessageStatus"].present?
       Rails.logger.info("Message status update: #{params['MessageStatus']}")
       head :ok
@@ -69,16 +79,28 @@ class MessagesController < ApplicationController
 
 
   def find_or_create_conversation(phone)
+    products = Product.where("stock > 0").select(:name, :price, :stock)
+
+    # Crear lista estilizada de productos con doble salto de línea
+    product_list = products.map { |p| "🔹 *#{p.name}* - 💲#{p.price}" }.join("\n\n")
+
+    product_data = products.map do |product|
+      { name: product.name, price: product.price, stock: product.stock }
+    end.to_json
+    puts "Product data: #{product_data}"
+
     Rails.cache.fetch(phone, expires_in: 30.minutes) do
       {
         id: phone,
         context: [
-          { role: "system", content: "Eres un asistente para agendar pedidos. Solicita información como nombre, fecha, hora, artículos, ubicación y dirección." }
+          { role: "system", content: "Eres un asistente para agendar pedidos, siempre te debes de presentar y ofrecer al usuario este es el menu: '📢 *¡Bienvenido!* Aquí tienes nuestro menú:\n\n#{product_list}\n\n¿Qué deseas ordenar?'. Pregunta por el nombre, fecha, hora, artículos y dirección." },
+          { role: "system", content: "Solo permite pedidos de los productos listados. Si el usuario elige un producto inexistente o pide más cantidad de la disponible, infórmale amablemente.\n\n📌 Productos válidos en JSON:\n#{product_data}" }
         ],
         slots: initialize_slots
       }
     end
   end
+
 
   def initialize_slots
     {
@@ -86,7 +108,8 @@ class MessagesController < ApplicationController
       delivery_date: nil,
       delivery_time: nil,
       items: nil,
-      address: nil
+      address: nil,
+      location: nil
     }
   end
 
@@ -117,6 +140,7 @@ class MessagesController < ApplicationController
       delivery_time: Time.parse(order[:delivery_time]),
       items: order[:items],
       address: order[:address],
+      location: order[:location],
       status: "pending"
     )
   end

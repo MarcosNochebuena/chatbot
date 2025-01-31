@@ -16,4 +16,5 @@
 #  updated_at    :datetime         not null
 #
 class Order < ApplicationRecord
+  # enum status: { pending: 0, confirmed: 1, delivered: 2, canceled: 3 }, _prefix: true
 end
