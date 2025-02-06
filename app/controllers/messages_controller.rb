@@ -2,10 +2,11 @@ require_relative "../services/whatsapp_bot"
 class MessagesController < ApplicationController
   skip_before_action :verify_authenticity_token
   def create
-    if params["MessageType"] == "text" && params["Body"].present? && params["From"].present?
+    if (params["MessageType"] == "text" && params["Body"].present? && params["From"].present?) || (params["MessageType"] == "location" && params["Latitude"].present? && params["Longitude"].present?)
       user_message = params["Body"]
       from_number = params["From"]
-
+      location = { latitude: params["Latitude"], longitude: params["Longitude"], location: params["Address"] } if params["MessageType"] == "location"
+      user_message = location.to_json if location.present?
       # Recupera o crea una conversación
       conversation = find_or_create_conversation(from_number)
 
@@ -14,16 +15,6 @@ class MessagesController < ApplicationController
 
       # Envía la respuesta al cliente
       MessageSender.send(to: from_number, body: response_message)
-      render json: { status: "success" }, status: :ok
-    elsif params["MessageType"] == "location" && params["Latitude"].present? && params["Longitude"].present?
-      location = "#{params['Latitude']},#{params['Longitude']}"
-      from_number = params["From"]
-      conversation = find_or_create_conversation(from_number)
-      slots = conversation[:slots] || initialize_slots
-
-      slots[:location] ||= location
-      # MessageSender.send(to: from_number, body: response_message)
-      puts slots
       render json: { status: "success" }, status: :ok
     elsif params["MessageStatus"].present?
       Rails.logger.info("Message status update: #{params['MessageStatus']}")
@@ -45,12 +36,13 @@ class MessagesController < ApplicationController
 
     # Genera la respuesta del bot
     response = WhatsAppBot.generate_response(user_message, context)
-
+    puts user_message
     # Extrae entidades del mensaje del usuario y parsea el JSON a un hash
     extracted_data = WhatsAppBot.extract_entities_from_message(user_message)
 
     # Actualiza los slots con los datos extraídos del mensaje
     puts "Extracted data: #{extracted_data}"
+    # puts location
     extracted_data.each do |key, value|
       puts "Key: #{key}, Value: #{value}"
       slots[key.to_sym] ||= value unless value.nil?
@@ -85,16 +77,17 @@ class MessagesController < ApplicationController
     product_list = products.map { |p| "🔹 *#{p.name}* - 💲#{p.price}" }.join("\n\n")
 
     product_data = products.map do |product|
-      { name: product.name, price: product.price, stock: product.stock }
+      { name: product.name, price: product.price, cantidad_disponible: product.stock }
     end.to_json
-    puts "Product data: #{product_data}"
+    puts "Solo permite pedidos de los productos listados. Si el usuario elige un producto inexistente o pide más cantidad de la disponible, infórmale amablemente.\nProductos válidos en JSON:\n#{product_data}"
 
     Rails.cache.fetch(phone, expires_in: 30.minutes) do
       {
         id: phone,
         context: [
-          { role: "system", content: "Eres un asistente para agendar pedidos, siempre te debes de presentar y ofrecer al usuario este es el menu: '📢 *¡Bienvenido!* Aquí tienes nuestro menú:\n\n#{product_list}\n\n¿Qué deseas ordenar?'. Pregunta por el nombre, fecha, hora, artículos y dirección." },
-          { role: "system", content: "Solo permite pedidos de los productos listados. Si el usuario elige un producto inexistente o pide más cantidad de la disponible, infórmale amablemente.\n\n📌 Productos válidos en JSON:\n#{product_data}" }
+          { role: "system", content: "Eres un asistente para agendar pedidos. Siempre te debes presentar y ofrecer al usuario este menú:\n\n📢 *¡Bienvenido!* Aquí tienes nuestro menú:\n\n#{product_list}\n\n¿Qué deseas ordenar?" },
+          { role: "system", content: "Para confirmar el pedido, necesitas la dirección exacta de entrega. Pide al usuario que comparta su ubicación en WhatsApp (Google Maps). Y que tambien escriba manualmente su dirección, nombre completo, fecha y hora de entrega" },
+          { role: "system", content: "Solo permite pedidos de los productos listados. Si el usuario elige un producto inexistente o pide más cantidad de la disponible, infórmale amablemente.\nProductos válidos en JSON:\n#{product_data}" }
         ],
         slots: initialize_slots
       }
@@ -109,13 +102,25 @@ class MessagesController < ApplicationController
       delivery_time: nil,
       items: nil,
       address: nil,
-      location: nil
+      location: nil,
+      latitude: nil,
+      longitude: nil
     }
   end
 
   def order_complete?(slots)
-    slots.values.all?
+    required_fields = [ :name, :delivery_date, :delivery_time, :items ]
+
+    # Verificar que los campos esenciales estén completos
+    return false unless required_fields.all? { |key| slots[key].present? }
+
+    # Validar que haya dirección manual o ubicación válida
+    address_present = slots[:address].present?
+    location_valid = slots[:location].present? && slots[:latitude].present? && slots[:longitude].present?
+
+    address_present || location_valid
   end
+
 
   def format_order_details(order)
     <<~MESSAGE
@@ -124,7 +129,7 @@ class MessagesController < ApplicationController
       📝 **Nombre:** #{order[:name] || 'No especificado'}
       📅 **Fecha de entrega:** #{order[:delivery_date] || 'No especificada'}
       ⏰ **Hora de entrega:** #{order[:delivery_time] || 'No especificada'}
-      📍 **Dirección:** #{order[:address] || 'No especificada'}
+      📍 **Dirección:** #{order[:address] || order[:location] || 'No especificada'}
       🛒 **Artículos solicitados:** #{order[:items].presence || 'No especificados'}
 
       ¡Gracias por confiar en nosotros! 😊
@@ -141,6 +146,8 @@ class MessagesController < ApplicationController
       items: order[:items],
       address: order[:address],
       location: order[:location],
+      latitude: order[:latitude],
+      longitude: order[:longitude],
       status: "pending"
     )
   end

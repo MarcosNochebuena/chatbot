@@ -1,6 +1,7 @@
 <table>
     <thead>
         <tr>
+            <th></th>
             <th>Phone</th>
             <th>Name</th>
             <th>Delivery Date</th>
@@ -11,10 +12,10 @@
             <th>Total</th>
             <th>Status</th>
             <th>Created At</th>
-            <th>Updated At</th>
         </tr>
     </thead>
     <tbody>
         <%= render @orders %>
     </tbody>
 </table>
+<%= link_to 'New Order', new_order_path %>

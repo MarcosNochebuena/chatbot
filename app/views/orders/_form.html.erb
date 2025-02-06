@@ -1,10 +1,10 @@
-<%= form_with(model: order, local: true) do |form| %>
-    <% if order.errors.any? %>
+<%= form_with(model: @order, local: true) do |form| %>
+    <% if @order.errors.any? %>
         <div id="error_explanation">
-            <h2><%= pluralize(order.errors.count, "error") %> prohibited this order from being saved:</h2>
+            <h2><%= pluralize(@order.errors.count, "error") %> prohibited this order from being saved:</h2>
 
             <ul>
-                <% order.errors.full_messages.each do |message| %>
+                <% @order.errors.full_messages.each do |message| %>
                     <li><%= message %></li>
                 <% end %>
             </ul>
@@ -44,6 +44,15 @@
     <div class="field">
         <%= form.label :location %>
         <%= form.text_field :location %>
+    </div>
+    <div class="field">
+        <%= form.label :latitude %>
+        <%= form.number_field :latitude, step: :any %>
+    </div>
+
+    <div class="field">
+        <%= form.label :longitude %>
+        <%= form.number_field :longitude, step: :any %>
     </div>
 
     <div class="field">

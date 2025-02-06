@@ -7,7 +7,9 @@
 #  delivery_date :date
 #  delivery_time :time
 #  items         :text
+#  latitude      :decimal(10, 6)
 #  location      :string
+#  longitude     :decimal(10, 6)
 #  name          :string
 #  phone         :string
 #  status        :integer
@@ -16,5 +18,6 @@
 #  updated_at    :datetime         not null
 #
 class Order < ApplicationRecord
-  # enum status: { pending: 0, confirmed: 1, delivered: 2, canceled: 3 }, _prefix: true
+  self.implicit_order_column = "created_at"
+  enum :status, { pending: 0, confirmed: 1, delivered: 2, canceled: 3 }, default: :pending
 end

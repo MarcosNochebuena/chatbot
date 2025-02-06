@@ -42,6 +42,7 @@ class WhatsAppBot
       - Fecha de entrega (YYYY-MM-DD)
       - Hora de entrega (HH:MM)
       - Dirección de entrega (texto)
+      - Ubicación en Google Maps (si el usuario la comparte)
       - Artículos solicitados (texto)(nombre del producto y cantidad)
 
       **Condiciones:**
@@ -49,14 +50,18 @@ class WhatsAppBot
       - Si se solicita un producto que no existe, ignóralo y usa null.
       - Si el usuario pide más cantidad de la disponible, ignóralo y usa null.
       - Interpreta fechas relativas como "hoy", "mañana" o "el próximo lunes" basado en la fecha actual: #{current_date}.
+      - Si el usuario comparte ubicación en WhatsApp, guárdala como 'location', 'latitude' y 'longitude'.
 
       **Ejemplo de respuesta esperada en JSON:**
       {
         "name": "Juan Pérez",
         "delivery_date": "2024-02-01",
         "delivery_time": "14:00",
-        "items": "1 hamburguesa, 1 refresco",
+        "items": "1 Pizza Hawaiana Mediana, 1 refresco de 2 litros",
         "address": "Calle 123, Ciudad"
+        "location": "Calle 123, Ciudad, Municipo, Estado"
+        "latitude": "20.577154380124"
+        "longitude": "-98.62409637624"
       }
 
       **Mensaje del usuario:** "#{user_message}"
@@ -68,6 +73,9 @@ class WhatsAppBot
         "delivery_time": null,
         "items": null,
         "address": null
+        "location": null
+        "latitude": null
+        "longitude": null
       }
     PROMPT
 

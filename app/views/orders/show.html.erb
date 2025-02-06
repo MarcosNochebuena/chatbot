@@ -1,2 +1,61 @@
-<h1>Orders#show</h1>
-<p>Find me in app/views/orders/show.html.erb</p>
+<h1>Order Details</h1>
+
+<p>
+    <strong>Name:</strong>
+    <%= @order.name %>
+</p>
+
+<p>
+    <strong>Phone:</strong>
+    <%= @order.phone %>
+</p>
+
+<p>
+    <strong>Address:</strong>
+    <%= @order.address %>
+</p>
+
+<p>
+    <strong>Location:</strong>
+    <%= @order.location %>
+</p>
+
+<p>
+    <strong>Latitude:</strong>
+    <%= @order.latitude %>
+</p>
+
+<p>
+    <strong>Longitude:</strong>
+    <%= @order.longitude %>
+</p>
+
+<p>
+    <strong>Delivery Date:</strong>
+    <%= @order.delivery_date %>
+</p>
+
+<p>
+    <strong>Delivery Time:</strong>
+    <%= @order.delivery_time %>
+</p>
+
+<p>
+    <strong>Items:</strong>
+    <%= @order.items %>
+</p>
+
+<p>
+    <strong>Total:</strong>
+    <%= number_to_currency(@order.total) %>
+</p>
+
+<p>
+    <strong>Status:</strong>
+    <%= @order.status %>
+</p>
+
+<p>
+    <strong>Created At:</strong>
+    <%= @order.created_at %>
+</p>

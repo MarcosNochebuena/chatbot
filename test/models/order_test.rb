@@ -7,7 +7,9 @@
 #  delivery_date :date
 #  delivery_time :time
 #  items         :text
+#  latitude      :decimal(10, 6)
 #  location      :string
+#  longitude     :decimal(10, 6)
 #  name          :string
 #  phone         :string
 #  status        :integer

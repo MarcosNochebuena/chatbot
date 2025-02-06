@@ -65,6 +65,6 @@ class OrdersController < ApplicationController
   end
 
   def order_params
-    params.require(:order).permit(:attribute1, :attribute2, :attribute3) # Reemplaza con los atributos reales de Order
+    params.require(:order).permit(:address, :delivery_date, :delivery_time, :items, :latitude, :location, :longitude, :name, :phone, :status, :total)
   end
 end
