@@ -27,44 +27,35 @@ class MessagesController < ApplicationController
   private
 
   def handle_message(conversation, user_message, phone)
-    # Recupera el contexto y los slots de la conversación
     context = conversation[:context] || []
     slots = conversation[:slots] || initialize_slots
-
-    # Agrega el nuevo mensaje del usuario al contexto
     context << { role: "user", content: user_message }
 
-    # Genera la respuesta del bot
     response = WhatsAppBot.generate_response(user_message, context)
     puts user_message
-    # Extrae entidades del mensaje del usuario y parsea el JSON a un hash
-    extracted_data = WhatsAppBot.extract_entities_from_message(user_message)
+    extracted_data = WhatsAppBot.extract_entities_from_message(user_message, phone)
 
-    # Actualiza los slots con los datos extraídos del mensaje
     puts "Extracted data: #{extracted_data}"
-    # puts location
     extracted_data.each do |key, value|
       puts "Key: #{key}, Value: #{value}"
-      slots[key.to_sym] ||= value unless value.nil?
+      if slots[key.to_sym].blank? && !value.nil?
+        slots[key.to_sym] = value
+      end
     end
 
-    # Agrega la respuesta del asistente al contexto
     context << { role: "assistant", content: response }
 
-    # Actualiza la conversación en Redis con el nuevo contexto y slots
     conversation[:context] = context
     conversation[:slots] = slots
     Rails.cache.write(conversation[:id], conversation, expires_in: 30.minutes)
 
-    # Detecta si el pedido está completo y responde adecuadamente
     puts "Slots: #{slots}"
     if order_complete?(slots)
       confirmation_message = format_order_details(slots)
-      save_order_to_db(slots, phone) # Opcional: guarda el pedido en la base de datos
-      Rails.cache.delete(conversation[:id]) # Limpia la conversación una vez completada
+      save_order_to_db(slots, phone)
+      Rails.cache.delete(conversation[:id])
       confirmation_message
     else
-      # Pregunta por los datos que faltan
       response
     end
   end
@@ -87,7 +78,7 @@ class MessagesController < ApplicationController
         context: [
           { role: "system", content: "Eres un asistente para agendar pedidos. Siempre te debes presentar y ofrecer al usuario este menú:\n\n📢 *¡Bienvenido!* Aquí tienes nuestro menú:\n\n#{product_list}\n\n¿Qué deseas ordenar?" },
           { role: "system", content: "Para confirmar el pedido, necesitas la dirección exacta de entrega. Pide al usuario que comparta su ubicación en WhatsApp (Google Maps). Y que tambien escriba manualmente su dirección, nombre completo, fecha y hora de entrega" },
-          { role: "system", content: "Solo permite pedidos de los productos listados. Si el usuario elige un producto inexistente o pide más cantidad de la disponible, infórmale amablemente.\nProductos válidos en JSON:\n#{product_data}" }
+          { role: "system", content: "Solo permite pedidos de los productos listados. Si el usuario elige un producto inexistente o pide más cantidad de la disponible (campo cantidad_disponible), infórmale amablemente.\nProductos válidos:\n#{product_data}" }
         ],
         slots: initialize_slots
       }
