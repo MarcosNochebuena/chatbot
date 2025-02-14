@@ -27,8 +27,8 @@ class WhatsAppBot
     current_date = Date.today.strftime("%Y-%m-%d")
 
     # Obtener productos disponibles
-    products = Product.where("stock > 0").select(:name, :price, :stock)
-    product_data = products.map { |p| { name: p.name, price: p.price, stock: p.stock } }.to_json
+    products = Product.where(available: true).select(:name, :price, :stock, :available)
+    product_data = products.map { |p| { name: p.name, price: p.price, stock: p.stock, disponible: p.available } }.to_json
 
     # Obtener datos previos del usuario
     previous_conversation = Rails.cache.fetch(phone, expires_in: 30.minutes) || {}
@@ -42,7 +42,7 @@ class WhatsAppBot
       - Hora de entrega: HH:MM
       - Dirección de entrega: texto
       - Ubicación en Google Maps (si la comparte)
-      - Productos: Lista de productos válidos, asegurando que no excedan el stock disponible: texto
+      - Productos: Lista de productos válidos (cantidad y producto), asegurando que no excedan el stock y que este disponible disponible: texto
 
       **Lista de productos disponibles:** #{product_data}
       **Fecha actual:** #{current_date}

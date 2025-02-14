@@ -36,6 +36,11 @@
         <%= form.number_field :price, step: 0.01 %>
     </div>
 
+    <div class="field">
+        <%= form.label :available %>
+        <%= form.check_box :available %>
+    </div>
+
     <div class="actions">
         <%= form.submit %>
     </div>

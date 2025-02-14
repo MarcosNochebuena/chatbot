@@ -62,13 +62,13 @@ class MessagesController < ApplicationController
 
 
   def find_or_create_conversation(phone)
-    products = Product.where("stock > 0").select(:name, :price, :stock)
+    products = Product.where(available: true).select(:name, :price, :stock, :available)
 
     # Crear lista estilizada de productos con doble salto de línea
     product_list = products.map { |p| "🔹 *#{p.name}* - 💲#{p.price}" }.join("\n\n")
 
     product_data = products.map do |product|
-      { name: product.name, price: product.price, cantidad_disponible: product.stock }
+      { name: product.name, price: product.price, cantidad_disponible: product.stock, disponible: product.available }
     end.to_json
     puts "Solo permite pedidos de los productos listados. Si el usuario elige un producto inexistente o pide más cantidad de la disponible, infórmale amablemente.\nProductos válidos en JSON:\n#{product_data}"
 

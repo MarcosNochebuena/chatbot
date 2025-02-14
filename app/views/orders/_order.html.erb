@@ -2,7 +2,7 @@
     <td>
         <%= link_to 'Edit', edit_order_path(order) %>
         <%= link_to 'Show', order_path(order) %>
-        <%= link_to 'Delete', order_path(order), method: :delete, data: { confirm: 'Are you sure?' } %>
+        <%= link_to 'Delete', order_path(order), data: { turbo_method: :delete, turbo_confirm: 'Are you sure?' } %>
     </td>
     <td><%= order.phone %></td>
     <td><%= order.name %></td>

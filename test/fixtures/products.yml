@@ -5,6 +5,7 @@
 # Table name: products
 #
 #  id          :bigint           not null, primary key
+#  available   :boolean          default(FALSE)
 #  description :string
 #  key_code    :string
 #  name        :string
