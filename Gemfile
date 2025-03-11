@@ -17,7 +17,7 @@ gem "stimulus-rails"
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"
 gem "ruby-openai"
-gem "twilio-ruby", "~> 7.4"
+gem "twilio-ruby", "~> 7.5"
 gem "redis"
 gem "pg", "~> 1.5"
 
